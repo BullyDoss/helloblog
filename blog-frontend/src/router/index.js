@@ -75,11 +75,24 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('adminToken')
   if (to.meta.requiresAuth && !token) {
     next('/admin/login')
-  } else if (to.path === '/admin/login' && token) {
+  } else if (to.meta.requiresAuth && token && isTokenExpired(token)) {
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUser')
+    next('/admin/login')
+  } else if (to.path === '/admin/login' && token && !isTokenExpired(token)) {
     next('/admin')
   } else {
     next()
   }
 })
+
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
 
 export default router

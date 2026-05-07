@@ -140,7 +140,9 @@ export default {
       try {
         const res = await axios.get('http://localhost:3000/api/admin/posts', { headers: this.getAuthHeaders() })
         this.posts = res.data
-      } catch (e) { console.error(e) } finally { this.loading = false }
+      } catch (e) {
+        this.handleAuthError(e)
+      } finally { this.loading = false }
     },
 
     showCreateForm() { this.currentView = 'create'; this.resetForm() },
@@ -197,6 +199,9 @@ export default {
         }
         setTimeout(() => { this.fetchPosts(); this.currentView = 'list'; this.resetForm() }, 800)
       } catch (err) {
+        if (err.response?.status === 403 || err.response?.status === 401) {
+          this.handleAuthError(err); return
+        }
         this.errorMsg = err.response?.data?.message || '保存失败'
       } finally { this.submitting = false }
     },
@@ -207,15 +212,30 @@ export default {
       if (!this.postToDelete) return
       this.deleting = true
       try {
-        await axios.delete('http://localhost:3000/api/admin/posts/' + this.postToDelete.id), { headers: this.getAuthHeaders() }
+        await axios.delete('http://localhost:3000/api/admin/posts/' + this.postToDelete.id, { headers: this.getAuthHeaders() })
         this.showDeleteDialog = false; this.postToDelete = null; this.fetchPosts()
-      } catch (e) { alert('删除失败') } finally { this.deleting = false }
+      } catch (e) {
+        if (e.response?.status === 403 || e.response?.status === 401) {
+          this.handleAuthError(e); return
+        }
+        alert('删除失败')
+      } finally { this.deleting = false }
     },
 
     handleLogout() {
       localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser')
       this.$router.push('/admin/login')
-    }
+    },
+
+    handleAuthError(err) {
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminUser')
+        this.$router.push('/admin/login')
+        return
+      }
+      console.error(err)
+    },
   },
   mounted() { this.fetchPosts() }
 }

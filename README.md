@@ -88,6 +88,4 @@ npm run dev
 - 图片上传功能
 - 响应式设计
 
-## License
 
-ISC
